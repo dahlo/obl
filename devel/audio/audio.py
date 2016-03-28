@@ -12,22 +12,31 @@ To test it out, run it and shout at your microphone:
 import alsaaudio, time, audioop
 from datetime import datetime
 import sqlite3
+import sys
+
+try:
+    from IPython.core.debugger import Tracer
+except:
+    pass
 
 class OBMAudio(object):
     
+
     def __init__(self):
         self.card = None
         try:
             for card in alsaaudio.cards():
-                if card.startswith("U0x"):
-                    self.card = card
+                if card.startswith("U0x") or card.startswith("Device"):
+                    self.card = 'sysdefault:CARD=%s' % card
                     break
         except:
             pass
         if not self.card:
-            return
+            sys.exit('Unable to find requested sound card.')
+
         self.configure_device()
         self.init_settings()
+
     
     def configure_device(self):
         self.device = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, alsaaudio.PCM_NONBLOCK, self.card)
@@ -68,6 +77,7 @@ class OBMAudio(object):
         start_timestamp = 0
         end_timestamp = 0
         intensity = []
+
         while True:
             
             # if it is time to do stuff
