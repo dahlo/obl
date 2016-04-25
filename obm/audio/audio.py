@@ -11,22 +11,33 @@ To test it out, run it and shout at your microphone:
 
 import alsaaudio, time, audioop
 from datetime import datetime
+import sqlite3
+import sys
+
+try:
+    from IPython.core.debugger import Tracer
+except:
+    pass
 
 class OBMAudio(object):
     
+
     def __init__(self):
         self.card = None
         try:
             for card in alsaaudio.cards():
-                if card.startswith("U0x"):
-                    self.card = card
+                if card.startswith("U0x") or card.startswith("Device"):
+                    self.card = 'sysdefault:CARD=%s' % card
                     break
         except:
             pass
         if not self.card:
-            return
+            Tracer()()
+            sys.exit('Unable to find requested sound card.')
+
         self.configure_device()
         self.init_settings()
+
     
     def configure_device(self):
         self.device = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, alsaaudio.PCM_NONBLOCK, self.card)
@@ -43,66 +54,105 @@ class OBMAudio(object):
         # or 0 bytes of data. The latter is possible because we are in nonblocking
         # mode.
         self.device.setperiodsize(160)
+
+
+
     
     def init_settings(self):
         # settings
-        self.tick_duration = 0.01 # leave at 0.01
-        self.nth_tick = 100 # do stuff every Nth tick
-        self.sound_cutoff_level = 15000 # cutoff value for sound level
+        self.sound_cutoff_level = 800 # cutoff value for sound level
+
+        # create a database connection
+        self.db_con = sqlite3.connect("db/obm.sqlite")
+        self.db_cur = self.db_con.cursor()
+        self.db_table = 'sound' # name of the table in the db to log things to
+
+
+
+
+
+    def db_log(self, start_timestamp, end_timestamp, intensity):
+        # insert to db
+        self.db_cur.execute("INSERT INTO %s (start,end,intensity) VALUES (?,?,?)" % self.db_table, [start_timestamp, end_timestamp, intensity])
+        self.db_con.commit()
+
+        # debug
+        print "%s\t%s\t%s" % (start_timestamp, end_timestamp, intensity)
         
     
-    def run(self, state_change_delta = 3):
-        """
-        state_change_delta = how many events is needed to change state?
-        """
+    def run(self):
+
+        # init
         tick = 0
+        nth_tick = 100
+        tick_duration = 0.01 # leave at 0.01
         state = 0
-        max_level = 0
-        state_tracking = [0] * state_change_delta
-        state_timestamp = 0
+        activity_detected = 0
+        state_tracking = [0] * 5
+        start_timestamp = 0
+        end_timestamp = 0
+        intensity = []
+
+        # settings
+        trigger_on = 3
+        trigger_off = 1
+
         while True:
             
             # if it is time to do stuff
-            if tick == self.nth_tick:
+            if tick == nth_tick:
 
                 # do stuff
-                sound_detected = 0
-                if max_level > self.sound_cutoff_level:
-                    sound_detected = 1
+                print state_tracking
 
                 # add to the tracking
                 state_tracking = state_tracking[:-1]
-                state_tracking.insert(0, sound_detected)
+                state_tracking.insert(0, activity_detected)
+
+                # if we're in a activity state, add this frame to the intensity memory
+                if state == 1:
+                    intensity.append(activity_detected)
+
 
                 ### is it time to change state?
-                # are we in a sound state and there has been silence?
-                if state == 1 and sum(state_tracking) == 0:
+                # are we in a activity state and there has been non-activity?
+                if state == 1 and sum(state_tracking) <= trigger_off:
 
                     # change state
                     state = 0
 
                     # log the event with duration etc
+                    end_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    intensity = int( float(sum(intensity))/len(intensity) *100) +(len(state_tracking)-trigger_off)
+                    self.db_log(start_timestamp, end_timestamp, intensity)
 
-                # or are we in a silence state and there has been sound?
-                elif state == 0 and sum(state_tracking) == state_change_delta:
+                    # reset
+                    start_timestamp = 0
+                    end_timestamp = 0
+                    intensity = []
+
+
+                # or are we in a non-activity state and there has been activity?
+                elif state == 0 and sum(state_tracking) >= trigger_on:
 
                     # change state
                     state = 1
 
                     # update the timestamp
-                    state_timestamp = datetime.now()
-
-                print '%s\t%s\t%s\t%s' % (state, state_tracking, sum(state_tracking), max_level)
+                    start_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
                 # reset
                 tick = 0
-                max_level = 0
+                activity_detected = 0
 
             # Read data from device
             l,data = self.device.read()
             if l:
                 # Return the maximum of the absolute value of all samples in a fragment.
-                max_level = max(max_level, audioop.max(data, 2))
+                if audioop.max(data, 2) > self.sound_cutoff_level:
+                    activity_detected = 1
+                # print audioop.max(data, 2)
+                
             time.sleep(.01)
 
             # increase the tick counter
