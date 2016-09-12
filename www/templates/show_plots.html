@@ -1,0 +1,86 @@
+{% extends "layout.html" %}
+
+{% block head %}
+
+  <script type="text/javascript">
+  window.onload = function () {
+    var chart = new CanvasJS.Chart("chartContainer",
+    {
+      title:{
+        text: "Activity"
+      }, 
+      legend: {
+        verticalAlign: "bottom",
+        horizontalAlign: "center"
+      },
+      axisY:{
+        maximum: 100,
+        minimum: -100,
+       },            
+      data: [
+      {        
+        name: "Sound",
+        showInLegend: true,
+        legendMarkerType: "square",
+        type: "area",
+        color: "rgba(54,158,173,.7)",
+
+        dataPoints: [ 
+        {% for point in sound %}
+          {x: {{ point[0] }}, y: {{ point[1] }} },  
+        {% endfor %}
+        ]
+      },
+      {        
+        name: "Motion",
+        showInLegend: true,
+        legendMarkerType: "square",
+        type: "area",
+        color: "rgba(194,70,66,.7)",
+        dataPoints: [
+        {% for point in motion %}
+          {x: {{ point[0] }}, y: -{{ point[1] }} },  
+        {% endfor %}
+        ]
+      }             
+      
+      ]
+    });
+
+    chart.render();
+  }
+  </script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/canvasjs.min.js') }}"></script>
+</head>
+
+{% endblock %}
+
+
+{% block body %}
+{% endblock %}
+
+
+
+{% block jumbotron_inactive %}
+    <!-- Main jumbotron for a primary marketing message or call to action -->
+    <div class="jumbotron">
+      <div class="container">
+        <h1></h1>
+        <p></p>
+      </div>
+    </div>
+
+{% endblock %}
+
+
+{% block container %}
+
+      <div class="row">
+        <div class="col-md-12">
+            <div id="chartContainer" style="height: 400px; width: 100%;">
+            </div>
+            <a href='?hours=24'>24h</a> <a href='?hours=168'>7d</a> <a href='?hours=720'>30d</a> <a href='?hours=8760'>12m</a> <a href='?hours=all'>all</a>
+        </div>
+      </div>
+
+{% endblock %}

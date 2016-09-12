@@ -1,0 +1,92 @@
+{% extends "layout.html" %}
+
+{% block head %}
+{% endblock %}
+
+
+{% block body %}
+{% endblock %}
+
+
+
+{% block jumbotron %}
+{% endblock %}
+
+
+{% block container %}
+
+      <div class="row">
+        <div class="col-md-12">
+          <form method="POST" action="/settings">
+            <h2>Setting</h2>
+
+            {% if error %}
+              <div class="alert alert-danger">
+              {% for err in error %}
+                <strong>Error:</strong> {{ err }}<br>
+              {% endfor %}
+              </div>
+            {% endif %}
+
+            <h3>www</h3>
+              
+            <div class="form-group row">
+              <label for="www:secret_key" class="col-sm-3 col-form-label">secret_key</label>
+              <div class="col-sm-9">
+                <input type="text" class="form-control" id="www:secret_key" value="{{ settings['www']['secret_key'] }}">
+                <small id="emailHelp" class="form-text text-muted">Set the secret key.  keep this really secret</small>
+              </div>
+            </div>
+            
+            <div class="form-group row">
+              <label for="www:google_tracking_id" class="col-sm-3 col-form-label">google_tracking_id</label>
+              <div class="col-sm-9">
+                <input type="text" class="form-control" id="www:google_tracking_id" value="{{ settings['www']['google_tracking_id'] }}">
+              </div>
+            </div>
+            
+          
+            <h3>sound</h3>
+            
+            <div class="form-group row">
+              <label for="sound:sensitivity" class="col-sm-3 col-form-label">sensitivity</label>
+              <div class="col-sm-9">
+                <input type="number" class="form-control" id="sound:sensitivity" min="0" step="1" data-bind="value:replyNumber" value="{{ settings['sound']['sensitivity'] }}"/>
+                <!-- <input type="text"  id="sound:sensitivity" "> -->
+              </div>
+            </div>
+            
+            <div class="form-group row">
+              <label for="sound:device" class="col-sm-3 col-form-label">device</label>
+              <div class="col-sm-9">
+                <select class="form-control" id="sound:device">
+                  <option value="{{ settings['sound']['device'] }}" selected>{{ settings['sound']['device'] }}</option>
+                  {% for device in sound_devices %}
+                    <option value="{{ device }}">{{ device }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            
+          
+            <h3>motion</h3>
+            
+            <div class="form-group row">
+              <label for="motion:sensitivity" class="col-sm-3 col-form-label">sensitivity</label>
+              <div class="col-sm-9">
+                <input type="number" class="form-control" id="motion:sensitivity" min="0" step="1" data-bind="value:replyNumber" value="{{ settings['motion']['sensitivity'] }}"/>
+              </div>
+            </div>
+              
+            
+            <div class="form-group row">
+              <div class="offset-sm-3 col-sm-9">
+                <button type="submit" class="btn btn-primary">Save settings</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+{% endblock %}
+
